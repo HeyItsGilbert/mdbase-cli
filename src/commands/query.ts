@@ -95,7 +95,7 @@ export function registerQuery(program: Command): void {
           const eqIdx = f.indexOf("=");
           if (eqIdx === -1) {
             console.error(chalk.red(`error: invalid formula format: ${f} (expected name=expression)`));
-            process.exit(1);
+            await closeAndExit(collection, 1);
           }
           formulas[f.slice(0, eqIdx)] = f.slice(eqIdx + 1);
         }

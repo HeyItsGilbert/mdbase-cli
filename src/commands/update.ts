@@ -5,13 +5,13 @@ import { Collection } from "@callumalpass/mdbase";
 import yaml from "js-yaml";
 import { parseFieldValue, closeAndExit } from "../utils.js";
 
-function parseFields(fieldArgs: string[]): Record<string, unknown> {
+async function parseFields(fieldArgs: string[], collection: { close(): Promise<void> } | null): Promise<Record<string, unknown>> {
   const fields: Record<string, unknown> = {};
   for (const f of fieldArgs) {
     const eqIdx = f.indexOf("=");
     if (eqIdx === -1) {
       console.error(chalk.red(`error: invalid field format: ${f} (expected key=value)`));
-      process.exit(1);
+      await closeAndExit(collection, 1);
     }
     const key = f.slice(0, eqIdx);
     const rawValue = f.slice(eqIdx + 1);
@@ -56,7 +56,7 @@ export function registerUpdate(program: Command): void {
       }
 
       // Parse field values
-      const fields = opts.field ? parseFields(opts.field as string[]) : undefined;
+      const fields = opts.field ? await parseFields(opts.field as string[], collection) : undefined;
 
       // Read body from stdin if requested
       let body: string | undefined = opts.body;
