@@ -11,6 +11,12 @@
  * Always close the collection before exiting to release all internal
  * resources (flush the SQLite cache, free prepared statements, close the
  * database) so the event loop can shut down cleanly.
+ *
+ * After closing, we schedule process.exit() on a short timer so that
+ * any pending libuv close-callbacks (e.g. the uv_async_t torn down by
+ * the WASM runtime) can fire before the process terminates.  The function
+ * itself never resolves, so callers see it as Promise<never> and do not
+ * execute any code after it.
  */
 export async function closeAndExit(
   collection: { close(): Promise<void> } | null | undefined,
@@ -23,7 +29,12 @@ export async function closeAndExit(
       // Ignore cleanup errors — we're exiting anyway.
     }
   }
-  process.exit(code);
+  process.exitCode = code;
+  // Schedule process.exit() after a short delay so libuv close-callbacks
+  // can finish before the handle list is torn down.
+  setTimeout(() => process.exit(code), 50);
+  // Never resolve — the timer above will terminate the process.
+  return new Promise<never>(() => { });
 }
 
 export function splitList(value: string | undefined): string[] | undefined {
